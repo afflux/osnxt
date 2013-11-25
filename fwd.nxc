@@ -1,0 +1,29 @@
+// vim:ft=c:ts=2:sts=2:sw=2:et
+#define MAXPWR 100
+#define WAIT_INITIAL 2000
+#define GO_WAIT 1000
+#define PAUSE_WAIT 500
+
+#define WAIT(x) { if (SENSOR_1) break; Wait(x); }
+
+task main() {
+  TextOut(0, 0, "WAIT");
+  SetSensorTouch(IN_1);
+  until(SENSOR_1 == 1);
+  TextOut(0, 0, "GO  ");
+  Wait(WAIT_INITIAL);
+
+  TextOut(0, 0, "RUN ");
+  for (;;) {
+    OnFwdSync(OUT_BC, MAXPWR, 0);
+    WAIT(GO_WAIT);
+    Float(OUT_BC);
+    WAIT(PAUSE_WAIT);
+    OnRevSync(OUT_BC, MAXPWR, 0);
+    WAIT(GO_WAIT);
+    Float(OUT_BC);
+    WAIT(PAUSE_WAIT);
+  }
+  Off(OUT_BC);
+  TextOut(0, 0, "DONE");
+}
