@@ -1,0 +1,23 @@
+// vim:ft=c:ts=2:sts=2:sw=2:et
+#define LOG(x) TextOut(0, 0, x, DRAW_OPT_CLEAR_WHOLE_SCREEN)
+#define MAXPWR 100
+#define RIGHT 100
+#define LEFT -100
+#define STRAIGHT 0
+#define WAIT Wait(715)
+task main() {
+
+  for (;;) {
+    LOG("TURN");
+    OnFwdSync(OUT_BC, MAXPWR, RIGHT);
+    WAIT;
+    Off(OUT_BC);
+    WAIT;
+    LOG("FORWARD");
+    OnFwdSync(OUT_BC, MAXPWR, STRAIGHT);
+    WAIT;
+    WAIT;
+    Float(OUT_BC);
+    WAIT;
+  }
+}

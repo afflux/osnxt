@@ -1,0 +1,15 @@
+// vim:ft=c:ts=2:sts=2:sw=2:et
+task main() {
+  SetSensorLowspeed(IN_1);
+
+  for (;;) {
+    ClearScreen();
+    byte c,r,g,b;
+    ReadSensorHTColor(IN_1, c,r,g,b);
+    NumOut(0, 16, c);
+    NumOut(0, 24, r);
+    NumOut(0, 32, g);
+    NumOut(0, 40, b);
+    Wait(200);
+  }
+}

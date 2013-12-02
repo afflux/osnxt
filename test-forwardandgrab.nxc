@@ -1,0 +1,14 @@
+// vim:ft=c:ts=2:sts=2:sw=2:et
+#define LOG(x) TextOut(0, 0, x, DRAW_OPT_CLEAR_WHOLE_SCREEN)
+#define P 40
+#define MAXPWR 100
+task main() {
+
+  LOG("GO");
+  for (;;) {
+    RotateMotorPID(OUT_A, MAXPWR, 120, P, 0, 0);
+    Wait(500);
+    RotateMotor(OUT_A, MAXPWR, 240);
+    Wait(1000);
+  }
+}

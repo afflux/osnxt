@@ -1,0 +1,35 @@
+// vim:ft=c:ts=2:sts=2:sw=2:et
+#define LOG(x) TextOut(0, 0, x, DRAW_OPT_CLEAR_WHOLE_SCREEN)
+#define MAXPWR 100
+#define RIGHT 100
+#define LEFT -100
+#define STRAIGHT 0
+#define WAIT Wait(1000)
+#define MINDIF 15
+
+task detect() {
+  SetSensorLowspeed(IN_1);
+  byte ctr = 0;
+  while (1) {
+    byte c,r,g,b;
+    NumOut(0, 16, ctr++);
+    ReadSensorHTColor(IN_1, c, r, g, b);  
+    
+    byte avg = (r + g + b) / 3;
+    if (r > avg && r - avg > MINDIF) {
+      PlayToneEx(440, 50, 4, false);
+      Off(OUT_A);
+    }
+  }
+}
+
+task main() {
+  StartTask(detect);
+
+  for (;;) {
+    LOG("TURN");
+    OnFwdSync(OUT_BC, MAXPWR, STRAIGHT);
+    OnFwd(OUT_A, MAXPWR);
+    WAIT;
+  }
+}
