@@ -4,6 +4,9 @@
     Is currently capable of connecting to, sending and receiving messages from the device,
     but the behavior is inconsistent and unreliable right now. Needs more work.
 
+    Documentation for the library is mostly nonexistent, but the code is largely readable
+    and can be found online here: https://bitbucket.org/jaraco/jaraco.nxt/src/f57211f87edf/jaraco/nxt/?at=default
+
 """
 
 from jaraco.nxt import Connection
