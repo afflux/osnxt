@@ -13,27 +13,30 @@ from jaraco.nxt import Connection
 from jaraco.nxt.messages import *
 import time
 
-print "Establishing connection..."
-conn = Connection(3)
+TIMEOUT = 5
+
+def log():
+    print "Establishing connection..."
+    conn = Connection(3)
+    conn.timeout = TIMEOUT
+    print 'Logging output...'
+    while True:
+        print 'Listening for output...'
+        try:
+            resp = conn.receive()
+        except struct.error:
+            print "timed out"
+            conn.close()
+            time.sleep(1)
+            conn.open()
+        else:
+            print parse_message(resp)
 
 
-def get_port(port, cls):
-    if isinstance(port, basestring):
-        port = getattr(cls, port)
-    assert port in cls.values()
-    return port
+def parse_message(msg):
+    print "parsing message"
+    raw_content = msg.payload
+    (msg_length,) = struct.unpack('B', raw_content[0])
+    return raw_content[1:msg_length + 1]
 
-
-def cycle_motor(conn, port):
-    "Turn the motor one direction, then the other, then stop it"
-    port = get_port(port, OutputPort)
-    cmd = SetOutputState(port, motor_on=True, set_power=100, run_state=RunState.running)
-    conn.send(cmd)
-    time.sleep(2)
-    cmd = SetOutputState(port, motor_on=True, set_power=-100, run_state=RunState.running)
-    conn.send(cmd)
-    time.sleep(2)
-    cmd = SetOutputState(port)
-    conn.send(cmd)
-
-cycle_motor(conn, 'b')
+log()
