@@ -1,0 +1,45 @@
+/* NXT Bluetooth communication library
+ * Author: Daniele Benedettelli
+ * Indirect contributors: David Wallace, Sivan Toledo, John Hansen
+ * Modified by Alexander Demin
+ */
+
+//#include "NXCDefs.h"
+
+#ifndef BTLIB
+   #define BTLIB
+#endif
+
+byte __buffer[];
+byte __array[];
+
+byte BTCommCheck (int connection){ //checks if BT connection on line exists
+   char status = BluetoothStatus(connection);
+   ClearLine(LCD_LINE2);
+   TextOut(0, LCD_LINE2, "Status=");
+   NumOut(64, LCD_LINE2, 1);
+   return (status == NO_ERR);
+}
+
+sub BTWait (int connection){  //wait until BT is idle
+   until(BluetoothStatus(connection)==NO_ERR) {
+     TextOut(0, LCD_LINE2, "waiting for BT");
+   }
+   ClearLine(LCD_LINE2);
+}
+
+sub BTSendMessage(byte connection, byte mailbox, string msg){ //send a BT message
+   byte len,Smb;
+   int i;
+   BTWait(connection);
+   ArrayInit(__buffer,0,60);
+   ArrayInit(__array,0,59);
+   StrToByteArray(msg,__array);
+   len = ArrayLen(__array);
+   __buffer[0] = len; //message size
+   for (i=0;i<len;i++){
+      __buffer[i+1] = __array[i];
+   }
+   BluetoothWrite(connection,__buffer);
+   BTWait(connection);
+}

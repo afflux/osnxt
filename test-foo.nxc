@@ -1,0 +1,81 @@
+// vim:ft=c:ts=2:sts=2:sw=2:et
+/*
+ * CONFIG:
+ *  A = X
+ *  B = LMOTOR
+ *  C = RMOTOR
+ *  1 = TOUCH_WALL
+ *  2 = DISTANCE
+ */
+
+
+#define LOG(x) { ClearLine(0); TextOut(0, 0, x); }
+
+#define POWER_MAX 100
+#define SWINGTURN90 1100
+#define POINTTURN90 800
+#define RIGHT (-100)
+#define LEFT (100)
+
+#define OUT_MOVE OUT_BC
+#define OUT_LEFT OUT_B
+#define OUT_RIGHT OUT_C
+#define TOUCH_WALL 1
+
+void swingTurn(byte output) {
+  LOG("SWING TURN");
+
+  int initialRotation = MotorRotationCount(output);
+  ClearLine(16);
+  NumOut(0, 16, initialRotation);
+  
+  OnFwdEx(output, POWER_MAX, RESET_ROTATION_COUNT);
+
+  until (MotorRotationCount(output) > SWINGTURN90) {
+    ClearLine(32);
+    NumOut(0, 32, MotorRotationCount(output));
+  }
+
+  OffEx(output, RESET_ROTATION_COUNT);
+}
+
+void pointTurn(char turn) {
+  LOG("POINT TURN");
+
+  char countingOutput = turn == LEFT ? OUT_RIGHT : OUT_LEFT;
+
+  int initialRotation = MotorRotationCount(countingOutput);
+  ClearLine(16);
+  NumOut(0, 16, initialRotation);
+  
+  OnFwdSyncEx(OUT_MOVE, POWER_MAX, turn, RESET_ROTATION_COUNT);
+
+  until (MotorRotationCount(countingOutput) > POINTTURN90) {
+    ClearLine(32);
+    NumOut(0, 32, MotorRotationCount(countingOutput));
+  }
+
+  OffEx(OUT_MOVE, RESET_ROTATION_COUNT);
+}
+
+inline void forward(char pwr, char reset) {
+  OnFwdSyncEx(OUT_MOVE, pwr, 0, RESET_ROTATION_COUNT);
+}
+
+inline void stand(void) {
+  Float(OUT_MOVE);
+}
+
+task main() {
+    SetSensorTouch(IN_1);
+
+    swingTurn(OUT_RIGHT);
+    swingTurn(OUT_RIGHT);
+
+    forward(POWER_MAX, 1);
+    until(SENSOR_1) stand();
+
+    pointTurn(LEFT);
+    
+    Wait(1000);
+}
