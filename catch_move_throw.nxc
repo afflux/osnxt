@@ -1,0 +1,47 @@
+ /********************************
+  - Motor A is the arm
+  - Motor B is left track
+  - Motor C is right track
+ ********************************/
+ 
+#define NEAR 15
+#define THRESHOLD 15
+
+void catchBall(){
+  SetSensorLowspeed(IN_3); //sets Light sensor to port 3
+  OnFwd(OUT_A, 50);
+
+  while(true){
+  byte c, r, g, b;
+  ReadSensorHTColor(IN_3, c, r, g, b);
+  byte avg = (r+g+b)/3;
+  if(r>avg && r-avg> THRESHOLD) break;
+  if(b>avg && b-avg> THRESHOLD) break;
+  }
+  Off(OUT_A);
+}
+
+
+void detectNet(){       //CHECKED
+  SetSensorLowspeed(IN_4); //sets US sensor to port 4
+  OnFwd(OUT_BC,75);
+  while(SensorUS(IN_4)>NEAR);
+  Off(OUT_BC);
+  Wait(500);
+}
+
+
+void throwBall(){
+  OnFwd(OUT_A,100);
+  Wait(500);
+  Off(OUT_A);
+}
+
+
+task main(){
+  //Precedes(catchBall, detectNet); //starts mentionned tasks in parallel
+
+  catchBall();
+  detectNet();
+  throwBall();
+}
