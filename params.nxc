@@ -1,0 +1,40 @@
+// vim:ft=c:ts=2:sts=2:sw=2:et
+/*
+ * CONFIG:
+ *  A = X
+ *  B = LMOTOR
+ *  C = RMOTOR
+ *  1 = TOUCH_WALL
+ *  2 = COLOR for LOAD_BALL
+ *  4 = DISTANCE
+ */
+
+
+//#define BT_ENABLE
+#include "btlog.nxc"
+
+#define LOG(x) { ClearLine(0); TextOut(0, 0, x); }
+
+#define SWINGTURN90 (SWINGTURN45 * 2)
+#define SWINGTURN45 1250
+#define POINTTURN90 (POINTTURN45 *2)
+#define POINTTURN45 320
+
+#define POWER_MAX 100
+#define ARM_COLLECT_POWER 50
+#define CLOSE_BACKOFF_DURATION 1000
+#define BACKOFF_DURATION 500
+#define WALL_TURN_DISTANCE 10
+#define MINDIF 15
+#define RIGHT (-100)
+#define LEFT (100)
+
+#define OUT_MOVE OUT_BC
+#define OUT_LEFT OUT_B
+#define OUT_RIGHT OUT_C
+#define TOUCH_WALL 1
+#define DISTANCE 4
+
+#define IN_(X) IN_##X
+#define SENSOR_TOUCH_WALL SENSOR_1
+#define SENSOR_DISTANCE SensorUS(IN_4)

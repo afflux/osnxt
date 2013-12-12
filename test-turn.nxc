@@ -1,129 +1,13 @@
 // vim:ft=c:ts=2:sts=2:sw=2:et
-/*
- * CONFIG:
- *  A = X
- *  B = LMOTOR
- *  C = RMOTOR
- *  1 = TOUCH_WALL
- *  2 = COLOR for LOAD_BALL
- *  4 = DISTANCE
- */
+#include "params.nxc"
+#include "turns.nxc"
 
-#include "btlog.nxc"
-
-#define LOG(x) { ClearLine(0); TextOut(0, 0, x); }
-
-#define POWER_TURN_MAIN POWER_MAX
-#define POWER_TURN_OPPOSITE 20
-#define SWINGTURN90 1450
-
-#define POWER_MAX 100
-#define ARM_COLLECT_POWER 50
-#define POINTTURN90 800
-#define CLOSE_BACKOFF_DURATION 800
-#define BACKOFF_DURATION 500
-#define WALL_TURN_DISTANCE 10
-#define MINDIF 15
-#define RIGHT (-100)
-#define LEFT (100)
-
-#define OUT_MOVE OUT_BC
-#define OUT_LEFT OUT_B
-#define OUT_RIGHT OUT_C
-#define TOUCH_WALL 1
-#define DISTANCE 4
-
-#define IN_(X) IN_##X
-#define SENSOR_TOUCH_WALL SENSOR_1
-#define SENSOR_DISTANCE SensorUS(IN_4)
-
-void swingTurn(byte output) {
-  LOG("SWING TURN");
-
-  char oppositeOutput = output == OUT_LEFT ? OUT_RIGHT : OUT_LEFT;
-  ResetRotationCount(output);
-
-  OnFwdEx(output, POWER_TURN_MAIN, RESET_ROTATION_COUNT);
-  OnFwd(oppositeOutput, POWER_TURN_OPPOSITE);
-
-  until (MotorRotationCount(output) > SWINGTURN90) {
-    string val = "swingturn ";
-    strcat(val, NumToStr(MotorRotationCount(output)));
-    strcat(val, " of ");
-    strcat(val, NumToStr(SWINGTURN90));
-    bt_log(val);
-    ClearLine(32);
-    TextOut(0, 32, val);
-  }
-
-  OffEx(OUT_MOVE, RESET_ROTATION_COUNT);
-  //Off(OUT_MOVE);
-}
-
-void pointTurn(char turn) {
-  LOG("POINT TURN");
-
-  char countingOutput = turn == LEFT ? OUT_RIGHT : OUT_LEFT;
-
-  int initialRotation = MotorRotationCount(countingOutput);
-  ClearLine(16);
-  NumOut(0, 16, initialRotation);
-
-  OnFwdSyncEx(OUT_MOVE, POWER_MAX, turn, RESET_ROTATION_COUNT);
-
-  until (MotorRotationCount(countingOutput) > POINTTURN90) {
-    ClearLine(32);
-    NumOut(0, 32, MotorRotationCount(countingOutput));
-  }
-
-  OffEx(OUT_MOVE, RESET_ROTATION_COUNT);
-}
-
-void forward(char pwr) {
-  //OnFwdSyncEx(OUT_MOVE, pwr, 0, RESET_ROTATION_COUNT);
-  OnFwdSync(OUT_MOVE, pwr, 0);
-}
-
-void backoff(void) {
-  OnRevSync(OUT_MOVE, POWER_MAX, 0);
-}
-
-byte run;
-
-task dist() {
-  while(run) {
-    string val = "DISTANCE=";
-    strcat(val, NumToStr(SENSOR_DISTANCE));
-    bt_log(val);
-    Wait(100);
-  }
-}
-
-task detect() {
-  SetSensorLowspeed(IN_2);
-
-  OnFwd(OUT_A, ARM_COLLECT_POWER);
-
-  while (run) {
-    byte c,r,g,b;
-    ReadSensorHTColor(IN_2, c, r, g, b);  
-    
-    byte avg = (r + g + b) / 3;
-    if (r > avg && r - avg > MINDIF) {
-      Off(OUT_A);
-    }
-  }
-}
 
 task main() {
-  init_bt_log();
-
-  run = 1;
-
   while (1) {
-    swingTurn(OUT_LEFT);
+    pointTurn(RIGHT, POINTTURN45); 
+    swingTurn(OUT_LEFT, SWINGTURN45); 
+
     Wait(1000);
   }
-
-  run = 0;
 }

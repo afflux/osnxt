@@ -1,0 +1,88 @@
+// vim:ft=c:ts=2:sts=2:sw=2:et
+
+#include "params.nxc"
+#include "turns.nxc"
+
+void forward(char pwr) {
+  //OnFwdSyncEx(OUT_MOVE, pwr, 0, RESET_ROTATION_COUNT);
+  OnFwdSync(OUT_MOVE, pwr, 0);
+}
+
+void backoff(void) {
+  OnRevSync(OUT_MOVE, POWER_MAX, 0);
+}
+
+void closeTurn(byte direction) {
+  pointTurn(direction, POINTTURN45); 
+  swingTurn(direction == RIGHT ? OUT_LEFT : OUT_RIGHT, SWINGTURN45); 
+}
+
+byte run;
+
+task dist() {
+  while(run) {
+    string val = "DISTANCE=";
+    strcat(val, NumToStr(SENSOR_DISTANCE));
+    bt_log(val);
+
+    val = "ROTL=";
+    strcat(val, NumToStr(MotorRotationCount(OUT_LEFT)));
+    strcat(val, "ROTR=");
+    strcat(val, NumToStr(MotorRotationCount(OUT_RIGHT)));
+    bt_log(val);
+
+    Wait(100);
+  }
+}
+
+task detect() {
+  SetSensorLowspeed(IN_2);
+
+  OnFwd(OUT_A, ARM_COLLECT_POWER);
+
+  while (run) {
+    byte c,r,g,b;
+    ReadSensorHTColor(IN_2, c, r, g, b);  
+    
+    byte avg = (r + g + b) / 3;
+    if (r > avg && r - avg > MINDIF) {
+      Off(OUT_A);
+    }
+  }
+}
+
+task main() {
+  init_bt_log();
+
+  SetSensorTouch(IN_1);
+  SetSensorUltrasonic(IN_4);
+
+  run = 1;
+  StartTask(dist);
+
+  pointTurn(LEFT, POINTTURN90);
+  forward(POWER_MAX);
+  until(SENSOR_TOUCH_WALL == 1);
+
+  backoff();
+  Wait(CLOSE_BACKOFF_DURATION);
+  Off(OUT_MOVE);
+
+  closeTurn(RIGHT);
+
+  //StartTask(detect);
+#if 0
+  while (1) {
+    forward(POWER_MAX);
+    until(SENSOR_DISTANCE < WALL_TURN_DISTANCE);
+    Float(OUT_MOVE);
+
+    backoff();
+    Wait(BACKOFF_DURATION);
+    Off(OUT_MOVE);
+    closeTurn(RIGHT);
+  }
+#endif
+
+  run = 0;
+}

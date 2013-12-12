@@ -1,0 +1,30 @@
+// vim:ft=c:ts=2:sts=2:sw=2:et
+
+#define POWER_TURN_MAIN POWER_MAX
+#define POWER_TURN_OPPOSITE 60
+
+
+void swingTurn(byte output, long amount) {
+  char oppositeOutput = output == OUT_LEFT ? OUT_RIGHT : OUT_LEFT;
+  ResetAllTachoCounts(OUT_MOVE);
+
+  OnFwd(output, POWER_TURN_MAIN);
+  OnFwd(oppositeOutput, POWER_TURN_OPPOSITE);
+
+  until (MotorRotationCount(output) > amount);
+
+  Off(OUT_MOVE);
+}
+
+void pointTurn(char turn, long amount) {
+  char countingOutput = turn == LEFT ? OUT_RIGHT : OUT_LEFT;
+
+  ResetAllTachoCounts(OUT_MOVE);
+
+  OnFwdSync(OUT_MOVE, POWER_MAX, turn);
+
+  until (MotorRotationCount(countingOutput) > amount);
+  LOG(NumToStr(MotorRotationCount(countingOutput)));
+
+  Off(OUT_MOVE);
+}
