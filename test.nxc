@@ -8,13 +8,10 @@ void forward(char pwr) {
   OnFwdSync(OUT_MOVE, pwr, 0);
 }
 
-void backoff(void) {
+void backoff(unsigned long duration) {
   OnRevSync(OUT_MOVE, POWER_MAX, 0);
-}
-
-void closeTurn(byte direction) {
-  pointTurn(direction, POINTTURN45); 
-  swingTurn(direction == RIGHT ? OUT_LEFT : OUT_RIGHT, SWINGTURN45); 
+  Wait(duration);
+  Off(OUT_MOVE);
 }
 
 byte run;
@@ -60,18 +57,16 @@ task main() {
   run = 1;
   StartTask(dist);
 
-  pointTurn(LEFT, POINTTURN90);
+  pointTurn(DIRECTION_LEFT, POINTTURN90);
   forward(POWER_MAX);
   until(SENSOR_TOUCH_WALL == 1);
 
-  backoff();
-  Wait(CLOSE_BACKOFF_DURATION);
-  Off(OUT_MOVE);
+  backoff(CLOSE_BACKOFF_DURATION);
 
-  closeTurn(RIGHT);
+  closeTurn(DIRECTION_RIGHT);
 
-  //StartTask(detect);
 #if 0
+  //StartTask(detect);
   while (1) {
     forward(POWER_MAX);
     until(SENSOR_DISTANCE < WALL_TURN_DISTANCE);
@@ -80,7 +75,7 @@ task main() {
     backoff();
     Wait(BACKOFF_DURATION);
     Off(OUT_MOVE);
-    closeTurn(RIGHT);
+    closeTurn(DIRECTION_RIGHT);
   }
 #endif
 

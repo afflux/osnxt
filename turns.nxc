@@ -1,30 +1,42 @@
 // vim:ft=c:ts=2:sts=2:sw=2:et
 
+
+#define SWINGTURN90 (SWINGTURN45 * 2)
+#define SWINGTURN45 1050
+#define POINTTURN90 600
+#define POINTTURN45 320
+
 #define POWER_TURN_MAIN POWER_MAX
-#define POWER_TURN_OPPOSITE 60
+#define POWER_TURN_OPPOSITE 70
 
 
-void swingTurn(byte output, long amount) {
-  char oppositeOutput = output == OUT_LEFT ? OUT_RIGHT : OUT_LEFT;
-  ResetAllTachoCounts(OUT_MOVE);
+void swingTurn(bool direction, long amount) {
+  byte         output = direction == DIRECTION_LEFT ? OUT_RIGHT : OUT_LEFT; 
+  byte oppositeOutput = direction == DIRECTION_LEFT ? OUT_LEFT : OUT_RIGHT;
+  long initialRotationCount = MotorRotationCount(output);
 
   OnFwd(output, POWER_TURN_MAIN);
   OnFwd(oppositeOutput, POWER_TURN_OPPOSITE);
 
-  until (MotorRotationCount(output) > amount);
+  until (MotorRotationCount(output) - initialRotationCount > amount);
 
   Off(OUT_MOVE);
 }
 
-void pointTurn(char turn, long amount) {
-  char countingOutput = turn == LEFT ? OUT_RIGHT : OUT_LEFT;
+void pointTurn(bool direction, long amount) {
+  char        turnpct = direction == DIRECTION_LEFT ? TURNPCT_LEFT : TURNPCT_RIGHT;
+  byte countingOutput = direction == DIRECTION_LEFT ? OUT_RIGHT : OUT_LEFT;
 
-  ResetAllTachoCounts(OUT_MOVE);
+  long initialRotationCount = MotorRotationCount(countingOutput);
 
-  OnFwdSync(OUT_MOVE, POWER_MAX, turn);
+  OnFwdSync(OUT_MOVE, POWER_MAX, turnpct);
 
-  until (MotorRotationCount(countingOutput) > amount);
-  LOG(NumToStr(MotorRotationCount(countingOutput)));
+  until (MotorRotationCount(countingOutput) - initialRotationCount > amount);
 
   Off(OUT_MOVE);
+}
+
+void closeTurn(bool direction) {
+  pointTurn(direction, POINTTURN45); 
+  swingTurn(direction, SWINGTURN45);
 }
