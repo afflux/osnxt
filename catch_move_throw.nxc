@@ -5,24 +5,29 @@
  ********************************/
  
 #define NEAR 15
-#define THRESHOLD 15
+#define THRESHOLD 35
 
 void catchBall(){
   SetSensorLowspeed(IN_3); //sets Light sensor to port 3
-  OnFwd(OUT_A, 50);
+  OnFwd(OUT_A, 40);
 
+  short c, r, g, b, avg;
   while(true){
-  byte c, r, g, b;
   ReadSensorHTColor(IN_3, c, r, g, b);
-  byte avg = (r+g+b)/3;
-  if(r>avg && r-avg> THRESHOLD) break;
-  if(b>avg && b-avg> THRESHOLD) break;
+  avg = (r+g+b)/3;
+  if(r-avg>20) break;
+  if(b>THRESHOLD && g>10 && b - g > 15) break;
   }
+  NumOut(0, LCD_LINE1, c, DRAW_OPT_CLEAR_WHOLE_SCREEN);
+  NumOut(0, LCD_LINE2, r);
+  NumOut(0, LCD_LINE3, g);
+  NumOut(0, LCD_LINE4, b);
+  NumOut(0, LCD_LINE5, avg);
   Off(OUT_A);
 }
 
 
-void detectNet(){       //CHECKED
+void detectNet(){   //screwed function
   SetSensorLowspeed(IN_4); //sets US sensor to port 4
   OnFwd(OUT_BC,75);
   while(SensorUS(IN_4)>NEAR);
@@ -32,9 +37,7 @@ void detectNet(){       //CHECKED
 
 
 void throwBall(){
-  OnFwd(OUT_A,100);
-  Wait(500);
-  Off(OUT_A);
+  RotateMotor(OUT_A, 100, 60);
 }
 
 
@@ -42,6 +45,11 @@ task main(){
   //Precedes(catchBall, detectNet); //starts mentionned tasks in parallel
 
   catchBall();
-  detectNet();
-  throwBall();
+
+ //detectNet();
+ Wait(1000);
+
+ throwBall();
+
+ //while(true);
 }
