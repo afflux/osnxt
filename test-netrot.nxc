@@ -15,6 +15,33 @@ void backoff(unsigned long duration) {
 }
 
 byte run;
+bool ballLoaded = 0;
+
+void throwBall(){
+  RotateMotor(OUT_ARM, 100, 60);
+  ballLoaded = 0;
+}
+
+task collect() {
+  SetSensorLowspeed(IN_3); //sets Light sensor to port 3
+
+  while (run) {
+    until(!ballLoaded);
+
+    OnFwd(OUT_ARM, 40);
+
+    short c, r, g, b, avg;
+    while(true){
+      ReadSensorHTColor(IN_3, c, r, g, b);
+      avg = (r+g+b)/3;
+      if(r - avg > 20) break;
+      if(b > 35 && g > 10 && b - g > 15) break;
+    }
+    Off(OUT_ARM);
+    ballLoaded = 1;
+
+  }
+}
 
 task dist() {
   while(run) {
@@ -22,9 +49,9 @@ task dist() {
     strcat(val, NumToStr(SENSOR_DISTANCE));
     bt_log(val);
 
-    val = "ROTL=";
+    val = "L=";
     strcat(val, NumToStr(MotorRotationCount(OUT_LEFT)));
-    strcat(val, "ROTR=");
+    strcat(val, "R=");
     strcat(val, NumToStr(MotorRotationCount(OUT_RIGHT)));
     bt_log(val);
 
@@ -32,26 +59,11 @@ task dist() {
   }
 }
 
-task detect() {
-  SetSensorLowspeed(IN_2);
 
-  OnFwd(OUT_A, ARM_COLLECT_POWER);
-
-  while (run) {
-    byte c,r,g,b;
-    ReadSensorHTColor(IN_2, c, r, g, b);  
-    
-    byte avg = (r + g + b) / 3;
-    if (r > avg && r - avg > MINDIF) {
-      Off(OUT_A);
-    }
-  }
-}
-
-
-
+short n = 0;
 task main() {
   init_bt_log();
+  Wait(1000);
 
   SetSensorTouch(IN_1);
   SetSensorUltrasonic(IN_4);
@@ -74,14 +86,25 @@ task main() {
 
   closeTurn(DIRECTION_RIGHT);
 
-  //StartTask(detect);
   while (1) {
+    ResetRotationCount(OUT_MOVE);
+    Yield();
     forward(POWER_MAX);
     if (isLookingAtNet()) {
+      if (n++ > 0) {
+        until(MotorRotationCount(OUT_RIGHT) > 600);
+        Off(OUT_MOVE);
+
+        NumOut(0, LCD_LINE1, MotorRotationCount(OUT_LEFT));
+        NumOut(0, LCD_LINE2, MotorRotationCount(OUT_RIGHT));
+        break;
+      } else {
       until(SENSOR_DISTANCE < TURN_DISTANCE_NETPILLAR);
       Off(OUT_MOVE);
+
       backoff(BACKOFF_DURATION_NET);
       pointTurn(DIRECTION_RIGHT, POINTTURNNET); 
+      }
     }
     else {
       // align at walls by running against
@@ -91,7 +114,9 @@ task main() {
     }
 
     closeTurn(DIRECTION_RIGHT);
+    Off(OUT_MOVE);
   }
 
   run = 0;
+  for(;;);
 }

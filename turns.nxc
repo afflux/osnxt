@@ -2,13 +2,21 @@
 
 
 #define SWINGTURN90 (SWINGTURN45 * 2)
-#define SWINGTURN45 1050
+#define SWINGTURN45 1185
 #define POINTTURN90 600
+#define POINTTURNNET 50
 #define POINTTURN45 320
 
 #define POWER_TURN_MAIN POWER_MAX
 #define POWER_TURN_OPPOSITE 70
 
+// this is in degrees
+int orientation = 0;
+
+inline int mod(int a, int b) {
+  int r = a % b;
+  return r < 0 ? r + b : r;
+}
 
 void swingTurn(bool direction, long amount) {
   byte         output = direction == DIRECTION_LEFT ? OUT_RIGHT : OUT_LEFT; 
@@ -38,5 +46,22 @@ void pointTurn(bool direction, long amount) {
 
 void closeTurn(bool direction) {
   pointTurn(direction, POINTTURN45); 
+
+  updateOrientation(direction == DIRECTION_RIGHT ? 45 : -45);
+  LOG(NumToStr(orientation));
+
   swingTurn(direction, SWINGTURN45);
+
+  updateOrientation(direction == DIRECTION_RIGHT ? 45 : -45);
+  LOG(NumToStr(orientation));
 }
+
+void updateOrientation(int val) {
+  orientation += val;
+  orientation = mod(orientation + 180, 360) - 180;
+}
+
+inline bool isLookingAt(int direction) {
+  return abs(mod(orientation + 180 - direction, 360) - 180) < 15;
+}
+
