@@ -10,33 +10,40 @@
 """
 
 from jaraco.nxt import Connection
-from jaraco.nxt.messages import *
+import struct
 import time
 
-TIMEOUT = 5
 
 def log():
-    print "Establishing connection..."
-    conn = Connection(3)
-    conn.timeout = TIMEOUT
-    print 'Logging output...'
-    while True:
-        print 'Listening for output...'
-        try:
-            resp = conn.receive()
-        except struct.error:
-            print "timed out"
-            conn.close()
-            time.sleep(1)
-            conn.open()
-        else:
-            print parse_message(resp)
+    log_file = None
+    try:
+        log_file = open('bluetooth.log', 'w')
+        print("Establishing connection...")
+        conn = Connection(3, timeout=5)
+        print('Logging output...')
+        while True:
+            print('Listening for output...')
+            try:
+                resp = conn.receive()
+            except struct.error:
+                print("Timed out")
+                conn.close()
+                time.sleep(1)
+                conn.open()
+            else:
+                msg = parse_message(resp)
+                print msg
+                log_file.write(msg + '\n')
+    finally:
+        if log_file is not None:
+            log_file.close()
+
 
 
 def parse_message(msg):
-    print "parsing message"
     raw_content = msg.payload
     (msg_length,) = struct.unpack('B', raw_content[0])
     return raw_content[1:msg_length + 1]
 
-log()
+if __name__ == '__main__':
+    log()
