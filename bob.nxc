@@ -16,6 +16,8 @@ void backoff(unsigned long duration) {
 
 byte run;
 bool ballLoaded = 0;
+bool shortRound = 0;
+short notFoundRound = 0;
 
 void throwBall(){
   RotateMotor(OUT_ARM, 100, 60);
@@ -43,6 +45,22 @@ task collect() {
   }
 }
 
+
+int tracing;
+task trace() {
+  tracing = 1;
+  SetSensorLight(IN_2);
+  until(!tracing || Sensor(IN_2) < LIGHT_THRESHOLD);
+  until(!tracing || Sensor(IN_2) > LIGHT_THRESHOLD);
+  if (tracing) {
+    Off(OUT_MOVE);
+    OnRev(OUT_RIGHT, 25);
+    Wait(300);
+    forward(POWER_MAX);
+  }
+}
+
+
 task dist() {
   while(run) {
     string val = "DISTANCE=";
@@ -59,7 +77,11 @@ task dist() {
   }
 }
 
-short notFoundRound = 0;
+
+
+/*****************************************
+                 MAIN
+*****************************************/
 
 task main() {
   init_bt_log();
@@ -108,11 +130,13 @@ task main() {
       else
         backoff(BACKOFF_DURATION_NET);
 
-      pointTurn(DIRECTION_RIGHT, POINTTURNNET); 
+      pointTurn(DIRECTION_RIGHT, POINTTURNNET);
+      StartTask(trace);
     }
     else {
       // align at walls by running against
       until(SENSOR_TOUCH_WALL == 1);
+      tracing=0; //stops task trace if the robot has not reached the line
       Float(OUT_MOVE);
       if (isLookingAt(180) && shortRound)
         backoff(BACKOFF_DURATION_WALL_SHORT);

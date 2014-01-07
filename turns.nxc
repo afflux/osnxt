@@ -1,6 +1,6 @@
 // vim:ft=c:ts=2:sts=2:sw=2:et
 
-
+#include "params.nxc"
 #define SWINGTURN90 (SWINGTURN45 * 2)
 #define SWINGTURN45 1185
 #define POINTTURN90 600
@@ -44,6 +44,10 @@ void pointTurn(bool direction, long amount) {
   Off(OUT_MOVE);
 }
 
+void updateOrientation(int val) {
+  orientation += val;
+  orientation = mod(orientation + 180, 360) - 180;
+}
 void closeTurn(bool direction) {
   pointTurn(direction, POINTTURN45); 
 
@@ -56,10 +60,6 @@ void closeTurn(bool direction) {
   LOG(NumToStr(orientation));
 }
 
-void updateOrientation(int val) {
-  orientation += val;
-  orientation = mod(orientation + 180, 360) - 180;
-}
 
 inline bool isLookingAt(int direction) {
   return abs(mod(orientation + 180 - direction, 360) - 180) < 15;

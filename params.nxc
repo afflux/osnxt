@@ -9,6 +9,8 @@
  *  4 = DISTANCE
  */
 
+#ifndef PARAMS_NXC
+#define PARAMS_NXC
 
 //#define BT_ENABLE
 #include "btlog.nxc"
@@ -29,6 +31,7 @@
 #define TURNPCT_RIGHT (-100)
 #define TURNPCT_LEFT (100)
 #define ROTATION_THRESHOLD_NET 850
+#define LIGHT_THRESHOLD 35
 
 #define OUT_ARM OUT_A
 #define OUT_MOVE OUT_BC
@@ -41,3 +44,4 @@
 
 #define SENSOR_TOUCH_WALL SENSOR_1
 #define SENSOR_DISTANCE SensorUS(IN_4)
+#endif
