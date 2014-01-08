@@ -10,16 +10,21 @@
 """
 
 from jaraco.nxt import Connection
+from datetime import datetime
 import struct
 import time
+import sys
 
+PORT = 3
+if sys.platform() == 'linux2':
+    PORT = '/dev/rfcomm0'
 
 def log():
     log_file = None
     try:
         log_file = open('bluetooth.log', 'w')
         print("Establishing connection...")
-        conn = Connection(3, timeout=5)
+        conn = Connection(PORT, timeout=5)
         print('Logging output...')
         while True:
             print('Listening for output...')
@@ -33,7 +38,7 @@ def log():
             else:
                 msg = parse_message(resp)
                 print msg
-                log_file.write(msg + '\n')
+                log_file.write(str(datetime.now().time()) + msg + '\n')
     finally:
         if log_file is not None:
             log_file.close()

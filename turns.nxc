@@ -4,18 +4,68 @@
 #define SWINGTURN90 (SWINGTURN45 * 2)
 #define SWINGTURN45 1185
 #define POINTTURN90 600
-#define POINTTURNNET 50
-#define POINTTURN45 320
+#define POINTTURNNET 60
+#define POINTTURN45 280
 
 #define POWER_TURN_MAIN POWER_MAX
 #define POWER_TURN_OPPOSITE 70
 
 // this is in degrees
 int orientation = 0;
+int turnOrientation = 0;
+int turning;
 
 inline int mod(int a, int b) {
   int r = a % b;
   return r < 0 ? r + b : r;
+}
+
+void updateOrientation(int val) {
+  orientation += val;
+  orientation = mod(orientation + 180, 360) - 180;
+}
+
+task monitorTurn() {
+  SetSensorUltrasonic(IN_DISTANCE);
+  while (run) {
+    int successfulTurn = 0;
+    until (turning);
+
+    // log stuff
+    string ori = "turning at ";
+    strcat(ori, NumToStr(orientation));
+    strcat(ori, " for ");
+    strcat(ori, NumToStr(turnOrientation));
+    bt_log(ori);
+
+    while (turning) {
+      byte dist = SENSOR_DISTANCE;
+
+      string val = "DISTANCE=";
+      strcat(val, NumToStr(dist));
+      bt_log(val);
+
+      if (dist == 255)
+        // invalid value, ignore
+        continue;
+
+      if (dist >= 35) {
+        successfulTurn = 1;
+        break;
+      }
+    }
+    until (!turning);
+    if (successfulTurn)
+      bt_log("turn completed");
+    else
+      bt_log("turn FAILED");
+
+    if (successfulTurn == 1)
+      updateOrientation(turnOrientation);
+    else {
+      PlayTone(TONE_C7, 200);
+    }
+  }
 }
 
 void swingTurn(bool direction, long amount) {
@@ -44,24 +94,15 @@ void pointTurn(bool direction, long amount) {
   Off(OUT_MOVE);
 }
 
-void updateOrientation(int val) {
-  orientation += val;
-  orientation = mod(orientation + 180, 360) - 180;
-}
 void closeTurn(bool direction) {
+  turnOrientation = direction == DIRECTION_RIGHT ? 90 : -90;
+
   pointTurn(direction, POINTTURN45); 
-
-  updateOrientation(direction == DIRECTION_RIGHT ? 45 : -45);
-  LOG(NumToStr(orientation));
-
   swingTurn(direction, SWINGTURN45);
 
-  updateOrientation(direction == DIRECTION_RIGHT ? 45 : -45);
-  LOG(NumToStr(orientation));
+  updateOrientation(turnOrientation);
 }
-
 
 inline bool isLookingAt(int direction) {
   return abs(mod(orientation + 180 - direction, 360) - 180) < 15;
 }
-

@@ -9,15 +9,14 @@ void forward(char pwr) {
 }
 
 void backoff(unsigned long duration) {
+  long rotation = MotorRotationCount(OUT_RIGHT);
   OnRevSync(OUT_MOVE, POWER_MAX, 0);
-  Wait(duration);
+  until(MotorRotationCount(OUT_RIGHT) < rotation - duration);
   Off(OUT_MOVE);
 }
 
-byte run;
 bool ballLoaded = 0;
 bool shortRound = 0;
-short notFoundRound = 0;
 
 void throwBall(){
   RotateMotor(OUT_ARM, 100, 60);
@@ -25,7 +24,7 @@ void throwBall(){
 }
 
 task collect() {
-  SetSensorLowspeed(IN_3); //sets Light sensor to port 3
+  SetSensorLowspeed(IN_LOAD_BALL); //sets Light sensor to port 3
 
   while (run) {
     until(!ballLoaded);
@@ -41,7 +40,7 @@ task collect() {
     }
     Off(OUT_ARM);
     ballLoaded = 1;
-    notFoundRound = 0;
+    shortRound = 0;
   }
 }
 
@@ -54,29 +53,14 @@ task trace() {
   until(!tracing || Sensor(IN_2) > LIGHT_THRESHOLD);
   if (tracing) {
     Off(OUT_MOVE);
-    OnRev(OUT_RIGHT, 25);
-    Wait(300);
+
+    pointTurn(DIRECTION_RIGHT, POINTTURN45);
+
+    Off(OUT_MOVE);
+
     forward(POWER_MAX);
   }
 }
-
-
-task dist() {
-  while(run) {
-    string val = "DISTANCE=";
-    strcat(val, NumToStr(SENSOR_DISTANCE));
-    bt_log(val);
-
-    val = "ROTL=";
-    strcat(val, NumToStr(MotorRotationCount(OUT_LEFT)));
-    strcat(val, "ROTR=");
-    strcat(val, NumToStr(MotorRotationCount(OUT_RIGHT)));
-    bt_log(val);
-
-    Wait(100);
-  }
-}
-
 
 
 /*****************************************
@@ -84,16 +68,23 @@ task dist() {
 *****************************************/
 
 task main() {
+  /*********
+   * SETUP
+   *********/
   init_bt_log();
   Wait(1000);
+  bt_log("Hello Dave.");
 
-  SetSensorTouch(IN_1);
-  SetSensorUltrasonic(IN_4);
+  SetSensorTouch(IN_TOUCH_WALL);
+  SetSensorUltrasonic(IN_DISTANCE);
 
   orientation = 0;
 
   run = 1;
-  StartTask(dist);
+
+  /**********
+   * ACTION
+   **********/
 
   pointTurn(DIRECTION_LEFT, POINTTURN90);
 
@@ -103,18 +94,45 @@ task main() {
 
   forward(POWER_MAX);
   until(SENSOR_TOUCH_WALL == 1);
+  Wait(200);
+  Off(OUT_MOVE);
 
   backoff(BACKOFF_DURATION_WALL);
 
-  closeTurn(DIRECTION_RIGHT);
+    string val = "DISTANCE=";
+    strcat(val, NumToStr(SENSOR_DISTANCE));
+    bt_log(val);
 
-  StartTask(collect);
+  closeTurn(DIRECTION_RIGHT);
+  Off(OUT_MOVE);
+
+  //StartTask(collect);
   while (1) {
     ResetRotationCount(OUT_MOVE);
     Yield();
     forward(POWER_MAX);
     if (isLookingAt(0)) { // looking at net
-      until(MotorRotationCount(OUT_RIGHT) > ROTATION_THRESHOLD_NET && SENSOR_DISTANCE < TURN_DISTANCE_NETPILLAR);
+      PlayTone(TONE_C4, 200);
+      bt_log("APPROACHING NET");
+
+      if (!shortRound) {
+        until(MotorRotationCount(OUT_RIGHT) > ROTATION_THRESHOLD_NET) {
+          string val = "RROT=";
+          strcat(val, NumToStr(MotorRotationCount(OUT_RIGHT)));
+          bt_log(val);
+        }
+      }
+
+      bt_log("CLOSING IN");
+
+      PlayTone(TONE_C7, 200);
+
+      until(SENSOR_DISTANCE < TURN_DISTANCE_NETPILLAR || SENSOR_TOUCH_WALL == 1){
+        string val = "NETDIST=";
+        strcat(val, NumToStr(SENSOR_DISTANCE));
+        bt_log(val);
+      }
+      PlayTone(TONE_C4, 100);
       Off(OUT_MOVE);
 
       // we are supposed to be standing right in front of the net here
@@ -122,22 +140,28 @@ task main() {
         throwBall();
       }
       else {
-        shortRound = !shortRound;
+        //shortRound = !shortRound;
       }
       
-      if (shortRound == 1)
+      if (shortRound == 1) {
+        bt_log("doing a reduced round");
         backoff(BACKOFF_DURATION_NET_SHORT);
-      else
+      }
+      else {
+        bt_log("doing a reduced round");
         backoff(BACKOFF_DURATION_NET);
+      }
 
       pointTurn(DIRECTION_RIGHT, POINTTURNNET);
       StartTask(trace);
     }
     else {
+      bt_log("approaching wall");
       // align at walls by running against
       until(SENSOR_TOUCH_WALL == 1);
+      Wait(200);
+      Off(OUT_MOVE);
       tracing=0; //stops task trace if the robot has not reached the line
-      Float(OUT_MOVE);
       if (isLookingAt(180) && shortRound)
         backoff(BACKOFF_DURATION_WALL_SHORT);
       else
@@ -149,4 +173,6 @@ task main() {
   }
 
   run = 0;
+  StopAllTasks();
+  Stop(true);
 }
