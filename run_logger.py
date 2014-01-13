@@ -38,7 +38,7 @@ def log():
             else:
                 msg = parse_message(resp)
                 print msg
-                log_file.write(str(datetime.now().time()) + msg + '\n')
+                log_file.write('%s %s\n' % (datetime.now().time(), msg))
     finally:
         if log_file is not None:
             log_file.close()
