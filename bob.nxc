@@ -16,11 +16,13 @@ void backoff(unsigned long duration) {
 }
 
 bool ballLoaded = 0;
+bool optimizedRound = 0;
 bool shortRound = 0;
 
 void throwBall(){
-  RotateMotor(OUT_ARM, 100, 60);
+  RotateMotor(OUT_ARM, ARM_THROW_POWER, 60);
   ballLoaded = 0;
+  shortRound = 0;
 }
 
 task collect() {
@@ -29,7 +31,7 @@ task collect() {
   while (run) {
     until(!ballLoaded);
 
-    OnFwd(OUT_ARM, 40);
+    OnFwd(OUT_ARM, ARM_COLLECT_POWER);
 
     short c, r, g, b, avg;
     while(true){
@@ -40,7 +42,7 @@ task collect() {
     }
     Off(OUT_ARM);
     ballLoaded = 1;
-    shortRound = 0;
+    optimizedRound = 0;
   }
 }
 
@@ -106,7 +108,7 @@ task main() {
   closeTurn(DIRECTION_RIGHT);
   Off(OUT_MOVE);
 
-  //StartTask(collect);
+  StartTask(collect);
   while (1) {
     ResetRotationCount(OUT_MOVE);
     Yield();
@@ -136,13 +138,14 @@ task main() {
       Off(OUT_MOVE);
 
       // we are supposed to be standing right in front of the net here
-      if (ballLoaded) {
+      if (!ballLoaded)
+        shortRound = !shortRound;
+
+      while (ballLoaded) {
         throwBall();
+        Wait(THROW_AGAIN_WAIT);
       }
-      else {
-        //shortRound = !shortRound;
-      }
-      
+
       if (shortRound == 1) {
         bt_log("doing a reduced round");
         backoff(BACKOFF_DURATION_NET_SHORT);
@@ -153,15 +156,27 @@ task main() {
       }
 
       pointTurn(DIRECTION_RIGHT, POINTTURNNET);
-      StartTask(trace);
     }
     else {
       bt_log("approaching wall");
+
       // align at walls by running against
-      until(SENSOR_TOUCH_WALL == 1);
+      until(SENSOR_TOUCH_WALL == 1) {
+        if (!isLookingAt(-90) && ballLoaded && !optimizedRound) {
+          // this is either next to the net or moving away from it.
+          // if we find a ball there, we turn around immediately instead of
+          // going until the wall
+          optimizedRound = 1;
+          Off(OUT_MOVE);
+          break;
+        }
+      }
       Wait(200);
+
       Off(OUT_MOVE);
-      tracing=0; //stops task trace if the robot has not reached the line
+
+      tracing=0; //stops line tracing task
+
       if (isLookingAt(180) && shortRound)
         backoff(BACKOFF_DURATION_WALL_SHORT);
       else
@@ -170,6 +185,9 @@ task main() {
 
     closeTurn(DIRECTION_RIGHT);
     Off(OUT_MOVE);
+
+    if (isLookingAt(90))
+      StartTask(trace);
   }
 
   run = 0;

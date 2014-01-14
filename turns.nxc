@@ -8,7 +8,7 @@
 #define POINTTURN45 280
 
 #define POWER_TURN_MAIN POWER_MAX
-#define POWER_TURN_OPPOSITE 70
+#define POWER_TURN_OPPOSITE 72
 
 // this is in degrees
 int orientation = 0;
