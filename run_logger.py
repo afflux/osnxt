@@ -16,7 +16,7 @@ import time
 import sys
 
 PORT = 3
-if sys.platform() == 'linux2':
+if sys.platform == 'linux2':
     PORT = '/dev/rfcomm0'
 
 def log():
@@ -38,7 +38,8 @@ def log():
             else:
                 msg = parse_message(resp)
                 print msg
-                log_file.write('%s %s\n' % (datetime.now().time(), msg))
+                if msg.startswith('DISTANCE'):
+                    log_file.write('%s %s\n' % (datetime.now().time(), msg))
     finally:
         if log_file is not None:
             log_file.close()
