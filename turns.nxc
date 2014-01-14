@@ -101,7 +101,6 @@ void closeTurn(bool direction) {
   swingTurn(direction, SWINGTURN45);
 
   updateOrientation(turnOrientation);
-  Off(OUT_MOVE);
 }
 
 inline bool isLookingAt(int direction) {
