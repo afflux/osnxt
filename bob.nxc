@@ -1,5 +1,41 @@
 // vim:ft=c:ts=2:sts=2:sw=2:et
 
+/* A small map:
++-------------------------------------++
+|                                      |
+|            +------------+            |
+|            |            |            |
+|            |  OPPONENT  |            |
+|            |            |            |
+|            |            |            |
+|            +------------+            |
+|                                      |
+|                                      |
+|                                      |
+|                                      |
+|               THE NET                |
++======================================+
+|                                      |
+|                                     R|
+| L                                   I|
+| E                                   G|
+| F                                   H|
+| T          +------------+           T|
+|            |  \  ||  /  |            |
+| W          |   \=||=/   |           W|
+| A          |   |bob |   |           A|
+| L          |   |____|   |           L|
+| L          +------------+           L|
++--------------------------------------+
+
+Relevant vocabulary:
+  Close turn: A wide turn intended to bring Bob close to a wall
+  Point turn: Turning on the spot
+  Routine: Handling a wall and backing off, ready for next close turn.
+  Short round: Driving closer to the middle of the field on horizontal routines
+    rather than driving close to a wall. Done if no ball was found along the walls.
+*/
+
 #include "params.nxc"
 #include "turns.nxc"
 
