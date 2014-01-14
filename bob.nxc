@@ -3,6 +3,11 @@
 #include "params.nxc"
 #include "turns.nxc"
 
+bool ballLoaded = 0;
+bool shortRound = 0;
+bool optimizedRound = 0;
+int tracing;
+
 void forward(char pwr) {
   //OnFwdSyncEx(OUT_MOVE, pwr, 0, RESET_ROTATION_COUNT);
   OnFwdSync(OUT_MOVE, pwr, 0);
@@ -15,14 +20,22 @@ void backoff(unsigned long duration) {
   Off(OUT_MOVE);
 }
 
-bool ballLoaded = 0;
-bool optimizedRound = 0;
-bool shortRound = 0;
-
 void throwBall(){
   RotateMotor(OUT_ARM, ARM_THROW_POWER, 60);
   ballLoaded = 0;
   shortRound = 0;
+}
+
+/* Blocks until a ball is detected by the color sensor */
+void waitForBall(){
+  short c, r, g, b, avg;
+  while (true){
+    ReadSensorHTColor(IN_3, c, r, g, b);
+    avg = (r + g + b)/3;
+    bool foundRedBall = r - avg > 20;
+    bool foundBlueBall = b > 35 && g > 10 && b - g > 15;
+    if (foundRedBall || foundBlueBall) return;
+  }
 }
 
 task collect() {
@@ -30,16 +43,8 @@ task collect() {
 
   while (run) {
     until(!ballLoaded);
-
     OnFwd(OUT_ARM, ARM_COLLECT_POWER);
-
-    short c, r, g, b, avg;
-    while(true){
-      ReadSensorHTColor(IN_3, c, r, g, b);
-      avg = (r+g+b)/3;
-      if(r - avg > 20) break;
-      if(b > 35 && g > 10 && b - g > 15) break;
-    }
+    waitForBall();
     Off(OUT_ARM);
     ballLoaded = 1;
     optimizedRound = 0;
@@ -47,7 +52,6 @@ task collect() {
 }
 
 
-int tracing;
 task trace() {
   tracing = 1;
   SetSensorLight(IN_2);
