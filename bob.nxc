@@ -70,8 +70,8 @@ task trace() {
 /* Write <message>=<number> to the bluetooth log. */
 void bt_log_number(string message, int number){
   string log_msg = message;
-  strcat(log_msg, '=');
-  strcat(NumToStr(number));
+  strcat(log_msg, "=");
+  strcat(log_msg, NumToStr(number));
   bt_log(log_msg);
 }
 
