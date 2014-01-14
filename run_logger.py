@@ -16,13 +16,11 @@ import time
 import sys
 
 PORT = 3
-if sys.platform() == 'linux2':
+if sys.platform == 'linux2':
     PORT = '/dev/rfcomm0'
 
 def log():
-    log_file = None
-    try:
-        log_file = open('bluetooth.log', 'w')
+    with open('bluetooth.log', 'w') as log_file:
         print("Establishing connection...")
         conn = Connection(PORT, timeout=5)
         print('Logging output...')
@@ -38,11 +36,8 @@ def log():
             else:
                 msg = parse_message(resp)
                 print msg
-                log_file.write('%s %s\n' % (datetime.now().time(), msg))
-    finally:
-        if log_file is not None:
-            log_file.close()
-
+                if msg.startswith('DISTANCE'):
+                    log_file.write('%s %s\n' % (datetime.now().time(), msg))
 
 
 def parse_message(msg):
