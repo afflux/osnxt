@@ -44,6 +44,10 @@ bool shortRound = 0;
 bool optimizedRound = 0;
 int tracing;
 
+void stopDriving(){
+  Off(OUT_MOVE);
+}
+
 void forward(char pwr) {
   //OnFwdSyncEx(OUT_MOVE, pwr, 0, RESET_ROTATION_COUNT);
   OnFwdSync(OUT_MOVE, pwr, 0);
@@ -53,7 +57,7 @@ void backoff(unsigned long duration) {
   long rotation = MotorRotationCount(OUT_RIGHT);
   OnRevSync(OUT_MOVE, POWER_MAX, 0);
   until(MotorRotationCount(OUT_RIGHT) < rotation - duration);
-  Off(OUT_MOVE);
+  stopDriving();
 }
 
 void throwBall(){
@@ -87,30 +91,32 @@ task collect() {
   }
 }
 
+void isOnBlackLine(){
+  return Sensor(IN_2) < LIGHT_THRESHOLD;
+}
+
+void isOffBlackLine(){
+  return Sensor(IN_2) < LIGHT_THRESHOLD;
+}
+
+void crossBlackLineOrQuitTracing(){
+  until(!tracing || isOnBlackLine());
+  until(!tracing || isOffBlackLine());
+}
 
 task trace() {
   tracing = 1;
   SetSensorLight(IN_2);
-  until(!tracing || Sensor(IN_2) < LIGHT_THRESHOLD);
-  until(!tracing || Sensor(IN_2) > LIGHT_THRESHOLD);
+  crossBlackLineOrQuitTracing();
   if (tracing) {
-    Off(OUT_MOVE);
-
+    stopDriving();
     pointTurn(DIRECTION_RIGHT, POINTTURN45);
-
-    Off(OUT_MOVE);
-
     forward(POWER_MAX);
   }
 }
 
-
-/*****************************************
-                 MAIN
-*****************************************/
-
 /* Write <message>=<number> to the bluetooth log. */
-void bt_log_number(string message, int number){
+void btLogNumber(string message, int number){
   string log_msg = message;
   strcat(log_msg, "=");
   strcat(log_msg, NumToStr(number));
@@ -129,110 +135,137 @@ void initial_setup(){
   run = 1;
 }
 
+/* Turn to face the left wall */
 void opening_move(){
   pointTurn(DIRECTION_LEFT, POINTTURN90);
-
   updateOrientation(-90);
-
   LOG(NumToStr(orientation));
-
   forward(POWER_MAX);
-  until(SENSOR_TOUCH_WALL == 1);
-  Wait(200);
-  Off(OUT_MOVE);
-
-  backoff(BACKOFF_DURATION_WALL);
-
-  bt_log_number("DISTANCE", SENSOR_DISTANCE);
-
+  crashAndAlignWithWall();
+  backoffFromWall();
+  btLogNumber("DISTANCE", SENSOR_DISTANCE);
   closeTurn(DIRECTION_RIGHT);
-  Off(OUT_MOVE);
+}
+
+void isCloseToPillar(){
+  return SENSOR_DISTANCE < TURN_DISTANCE_NETPILLAR || SENSOR_TOUCH_WALL == 1;
+}
+
+void throwAsManyBallsAsPossible(){
+  while (ballLoaded) {
+    throwBall();
+    Wait(THROW_AGAIN_WAIT);
+  }
+}
+
+void backoffFromNet(){
+  if (shortRound == 1) {
+    bt_log("doing a reduced round");
+    backoff(BACKOFF_DURATION_NET_SHORT);
+  }
+  else {
+    bt_log("doing a normal round");
+    backoff(BACKOFF_DURATION_NET);
+  }
+}
+
+void driveMinimumDistanceTowardsPillar(){
+  if (!shortRound) {
+    until(MotorRotationCount(OUT_RIGHT) > ROTATION_THRESHOLD_NET) {
+      btLogNumber("RROT", MotorRotationCount(OUT_RIGHT));
+    }
+  }
+}
+
+/* Takes Bob from a spot on the left wall to the edge of the net */
+void driveToNet(){
+  PlayTone(TONE_C4, 200);
+  bt_log("APPROACHING NET");
+
+  /* Drive closer to the net before activating the distance sensor */
+  driveMinimumDistanceTowardsPillar();
+
+  bt_log("CLOSING IN");
+  PlayTone(TONE_C7, 200);
+
+  until(isCloseToPillar()){
+    btLogNumber("NETDIST", SENSOR_DISTANCE);
+  }
+
+  PlayTone(TONE_C4, 100);
+  stopDriving();
+}
+
+void doNetRoutine(){
+  driveToNet();
+
+  // If we did an entire round without finding a ball, switch route
+  if (!ballLoaded)
+    shortRound = !shortRound;
+
+  // we are now (hopefully) standing in front of the net
+  throwAsManyBallsAsPossible();
+  backoffFromNet();
+
+  // Do a very small pointturn to prevent the next closeTurn from crossing the line
+  pointTurn(DIRECTION_RIGHT, POINTTURNNET);
+
+  StartTask(trace);
+}
+
+void crashAndAlignWithWall(){
+  // align with wall by running against it for a short duration
+  until(SENSOR_TOUCH_WALL == 1) {
+    bool foundOptimizableBall = !isLookingAt(-90) && ballLoaded && !optimizedRound;
+    if (foundOptimizableBall) {
+      // this is either next to the net or moving away from it.
+      // if we find a ball there, we turn around immediately instead of
+      // going until the wall
+      optimizedRound = 1;
+      stopDriving();
+      break;
+    }
+  }
+  Wait(200);
+  stopDriving();
+}
+
+void backoffFromWall(){
+  if (isLookingAt(180) && shortRound)
+    backoff(BACKOFF_DURATION_WALL_SHORT);
+  else
+    backoff(BACKOFF_DURATION_WALL);
+}
+
+void doWallRoutine(){
+  bt_log("approaching wall");
+  crashAndAlignWithWall();
+  tracing = 0; //stops line tracing task
+  backoffFromWall();
+}
+
+/*
+* A single routine is the sequence of taking Bob from the state 'driving along a wall' to
+* backed off the appropriate distance (via detecting the net or aligning with a wall).
+*/
+void doRoutine(){
+  if (isLookingAt(0)) { // looking at net
+    doNetRoutine();
+  }
+  else {
+    doWallRoutine();
+  }
 }
 
 task main() {
   initial_setup();
-
   opening_move();
-
   StartTask(collect);
   while (1) {
     ResetRotationCount(OUT_MOVE);
     Yield();
     forward(POWER_MAX);
-    if (isLookingAt(0)) { // looking at net
-      PlayTone(TONE_C4, 200);
-      bt_log("APPROACHING NET");
-
-      if (!shortRound) {
-        until(MotorRotationCount(OUT_RIGHT) > ROTATION_THRESHOLD_NET) {
-          bt_log_number("RROT", MotorRotationCount(OUT_RIGHT));
-        }
-      }
-
-      bt_log("CLOSING IN");
-
-      PlayTone(TONE_C7, 200);
-
-      until(SENSOR_DISTANCE < TURN_DISTANCE_NETPILLAR || SENSOR_TOUCH_WALL == 1){
-        bt_log_number("NETDIST", SENSOR_DISTANCE);
-      }
-      PlayTone(TONE_C4, 100);
-      Off(OUT_MOVE);
-
-      // we are supposed to be standing right in front of the net here
-      if (!ballLoaded)
-        shortRound = !shortRound;
-
-      while (ballLoaded) {
-        throwBall();
-        Wait(THROW_AGAIN_WAIT);
-      }
-
-      if (shortRound == 1) {
-        bt_log("doing a reduced round");
-        backoff(BACKOFF_DURATION_NET_SHORT);
-      }
-      else {
-        bt_log("doing a normal round");
-        backoff(BACKOFF_DURATION_NET);
-      }
-
-      pointTurn(DIRECTION_RIGHT, POINTTURNNET);
-    }
-    else {
-      bt_log("approaching wall");
-
-      // align at walls by running against
-      until(SENSOR_TOUCH_WALL == 1) {
-        if (!isLookingAt(-90) && ballLoaded && !optimizedRound) {
-          // this is either next to the net or moving away from it.
-          // if we find a ball there, we turn around immediately instead of
-          // going until the wall
-          optimizedRound = 1;
-          Off(OUT_MOVE);
-          break;
-        }
-      }
-      Wait(200);
-
-      Off(OUT_MOVE);
-
-      tracing=0; //stops line tracing task
-
-      if (isLookingAt(180) && shortRound)
-        backoff(BACKOFF_DURATION_WALL_SHORT);
-      else
-        backoff(BACKOFF_DURATION_WALL);
-    }
-
+    doRoutine();
     closeTurn(DIRECTION_RIGHT);
-    Off(OUT_MOVE);
-
-    if (isLookingAt(90))
-      StartTask(trace);
   }
-
-  run = 0;
-  StopAllTasks();
-  Stop(true);
 }
