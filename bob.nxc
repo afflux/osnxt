@@ -91,11 +91,11 @@ task collect() {
   }
 }
 
-void isOnBlackLine(){
+bool isOnBlackLine(){
   return Sensor(IN_2) < LIGHT_THRESHOLD;
 }
 
-void isOffBlackLine(){
+bool isOffBlackLine(){
   return Sensor(IN_2) < LIGHT_THRESHOLD;
 }
 
@@ -135,6 +135,31 @@ void initial_setup(){
   run = 1;
 }
 
+void crashAndAlignWithWall(){
+  // align with wall by running against it for a short duration
+  until(SENSOR_TOUCH_WALL == 1) {
+    bool foundOptimizableBall = !isLookingAt(-90) && ballLoaded && !optimizedRound;
+    if (foundOptimizableBall) {
+      // this is either next to the net or moving away from it.
+      // if we find a ball there, we turn around immediately instead of
+      // going until the wall
+      optimizedRound = 1;
+      stopDriving();
+      break;
+    }
+  }
+  Wait(200);
+  stopDriving();
+}
+
+void backoffFromWall(){
+  if (isLookingAt(180) && shortRound)
+    backoff(BACKOFF_DURATION_WALL_SHORT);
+  else
+    backoff(BACKOFF_DURATION_WALL);
+}
+
+
 /* Turn to face the left wall */
 void opening_move(){
   pointTurn(DIRECTION_LEFT, POINTTURN90);
@@ -147,7 +172,7 @@ void opening_move(){
   closeTurn(DIRECTION_RIGHT);
 }
 
-void isCloseToPillar(){
+bool isCloseToPillar(){
   return SENSOR_DISTANCE < TURN_DISTANCE_NETPILLAR || SENSOR_TOUCH_WALL == 1;
 }
 
@@ -210,31 +235,7 @@ void doNetRoutine(){
   // Do a very small pointturn to prevent the next closeTurn from crossing the line
   pointTurn(DIRECTION_RIGHT, POINTTURNNET);
 
-  StartTask(trace);
-}
-
-void crashAndAlignWithWall(){
-  // align with wall by running against it for a short duration
-  until(SENSOR_TOUCH_WALL == 1) {
-    bool foundOptimizableBall = !isLookingAt(-90) && ballLoaded && !optimizedRound;
-    if (foundOptimizableBall) {
-      // this is either next to the net or moving away from it.
-      // if we find a ball there, we turn around immediately instead of
-      // going until the wall
-      optimizedRound = 1;
-      stopDriving();
-      break;
-    }
-  }
-  Wait(200);
-  stopDriving();
-}
-
-void backoffFromWall(){
-  if (isLookingAt(180) && shortRound)
-    backoff(BACKOFF_DURATION_WALL_SHORT);
-  else
-    backoff(BACKOFF_DURATION_WALL);
+  //StartTask(trace);
 }
 
 void doWallRoutine(){
