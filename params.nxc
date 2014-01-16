@@ -15,6 +15,7 @@
 #include "btlog.nxc"
 
 #define LOG(x) { ClearLine(0); TextOut(0, 0, x); }
+#define LOGL(y, x) { ClearLine(y); TextOut(0, y, x); }
 
 #define DIRECTION_LEFT 1
 #define DIRECTION_RIGHT 0
@@ -33,7 +34,7 @@
 #define TURNPCT_RIGHT (-100)
 #define TURNPCT_LEFT (100)
 #define ROTATION_THRESHOLD_NET 450
-#define LIGHT_THRESHOLD 35
+#define LIGHT_THRESHOLD 40
 
 #define OUT_ARM OUT_A
 #define OUT_MOVE OUT_BC
