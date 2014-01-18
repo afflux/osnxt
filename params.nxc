@@ -5,6 +5,7 @@
  *  B = LMOTOR
  *  C = RMOTOR
  *  1 = TOUCH_WALL
+ *  2 = LIGHT for LINE
  *  3 = COLOR for LOAD_BALL
  *  4 = DISTANCE
  */
@@ -21,7 +22,8 @@
 #define DIRECTION_RIGHT 0
 
 #define POWER_MAX 100
-#define ARM_THROW_POWER 90
+#define ARM_THROW_POWER 100
+#define ARM_THROW_DEGREE 65
 #define ARM_COLLECT_POWER 35
 #define BACKOFF_DURATION_WALL 120
 #define BACKOFF_DURATION_WALL_SHORT 800
@@ -42,6 +44,7 @@
 #define OUT_RIGHT OUT_C
 
 #define IN_TOUCH_WALL 0
+#define IN_LINE_COLOR 1
 #define IN_LOAD_BALL 2
 #define IN_DISTANCE 3
 
