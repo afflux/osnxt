@@ -49,7 +49,6 @@ void stopDriving(){
 }
 
 void forward(char pwr) {
-  //OnFwdSyncEx(OUT_MOVE, pwr, 0, RESET_ROTATION_COUNT);
   OnFwdSync(OUT_MOVE, pwr, 0);
 }
 
@@ -70,7 +69,7 @@ void throwBall(){
 /* Blocks until a ball is detected by the color sensor */
 void waitForBall(){
   short c;
-  while (true){
+  while (run) {
     c = SensorHTColorNum(IN_LOAD_BALL);
     if (c == 9) {
       PlayTone(TONE_D4, 100);
@@ -83,6 +82,10 @@ void waitForBall(){
   }
 }
 
+/*
+ * background task that moves the collection arm until a ball is detected.
+ * sets ballLoaded flag, so that the routine knows a ball can be thrown.
+ */
 task collect() {
   SetSensorLowspeed(IN_LOAD_BALL); //sets Light sensor to port 3
 
@@ -109,6 +112,10 @@ void crossBlackLineOrQuitTracing(){
   until(!tracing || isOffBlackLine());
 }
 
+/*
+ * background task that uses the light sensor to make an emergency course
+ * adjustment when leaving the black line.
+ */
 task trace() {
   PlayTone(TONE_C5, 100);
   tracing = 1;
@@ -121,18 +128,8 @@ task trace() {
   }
 }
 
-/* Write <message>=<number> to the bluetooth log. */
-void btLogNumber(string message, int number){
-  string log_msg = message;
-  strcat(log_msg, "=");
-  strcat(log_msg, NumToStr(number));
-  bt_log(log_msg);
-}
-
 void initial_setup(){
-  init_bt_log();
   Wait(1000);
-  bt_log("Hello Dave.");
 
   SetSensorTouch(IN_TOUCH_WALL);
   SetSensorUltrasonic(IN_DISTANCE);
@@ -174,7 +171,6 @@ void opening_move(){
   forward(POWER_MAX);
   crashAndAlignWithWall();
   backoffFromWall();
-  btLogNumber("DISTANCE", SENSOR_DISTANCE);
   closeTurn(DIRECTION_RIGHT);
 }
 
@@ -191,37 +187,27 @@ void throwAsManyBallsAsPossible(){
 
 void backoffFromNet(){
   if (shortRound == 1) {
-    bt_log("doing a reduced round");
     backoff(BACKOFF_DURATION_NET_SHORT);
   }
   else {
-    bt_log("doing a normal round");
     backoff(BACKOFF_DURATION_NET);
   }
 }
 
 void driveMinimumDistanceTowardsPillar(){
   if (!shortRound) {
-    until(MotorRotationCount(OUT_RIGHT) > ROTATION_THRESHOLD_NET) {
-      btLogNumber("RROT", MotorRotationCount(OUT_RIGHT));
-    }
+    until(MotorRotationCount(OUT_RIGHT) > ROTATION_THRESHOLD_NET);
   }
 }
 
 /* Takes Bob from a spot on the left wall to the edge of the net */
 void driveToNet(){
-  bt_log("APPROACHING NET");
-
   /* Drive closer to the net before activating the distance sensor */
   driveMinimumDistanceTowardsPillar();
 
-  bt_log("CLOSING IN");
-
   SetSensorLight(IN_LINE_COLOR);
 
-  until(isCloseToPillar()){
-    btLogNumber("NETDIST", SENSOR_DISTANCE);
-  }
+  until(isCloseToPillar());
 
   stopDriving();
 }
@@ -246,7 +232,6 @@ void doWallRoutine(){
     // trace the line before going next to the net
     StartTask(trace);
 
-  bt_log("approaching wall");
   crashAndAlignWithWall();
   tracing = 0; //stops line tracing task
   backoffFromWall();
